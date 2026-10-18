@@ -90,8 +90,29 @@ export function InvestigatePage() {
 
   const selectedVuln = vulns.find((v) => v.id === selectedVulnId);
 
-  const highlightNodes = result
-    ? result.evidence_paths.flatMap((p) => p.path_nodes.map((n) => n.name))
+  // Collect { name, version } pairs from every node in every evidence path.
+  // version may be an empty string (non-package nodes) or undefined — normalise to ''.
+  const pathNodes = result
+    ? result.evidence_paths.flatMap((p) =>
+        p.path_nodes.map((n) => ({ name: n.name, version: n.version ?? '' }))
+      )
+    : [];
+
+  // Map those pairs to the actual React Flow node IDs used by graph_data.
+  // Package nodes: match by both name and version; if the evidence-path version is empty or missing, do not match.
+  // Non-package nodes: continue matching by name, using data.name with label fallback.
+  const highlightNodes: string[] = result
+    ? result.graph_data.nodes
+        .filter((gn) => {
+          const gnName = String(gn.data.name ?? gn.label);
+          const isPackage = gn.type === 'Package';
+          const gnVersion = String(gn.data.version ?? '');
+          return pathNodes.some((pn) => {
+            if (pn.name !== gnName) return false;
+            return isPackage ? Boolean(pn.version) && pn.version === gnVersion : true;
+          });
+        })
+        .map((gn) => gn.id)
     : [];
 
   return (
