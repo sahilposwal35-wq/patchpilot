@@ -1,0 +1,99 @@
+{
+  "dataset_version": "1.0.0",
+  "disclaimer": "SYNTHETIC TEST BENCHMARK FIXTURES. All findings and entities are synthetic.",
+  "test_cases": [
+    {
+      "id": "TC-DIRECT-01",
+      "name": "Direct Dependency Reachability",
+      "vuln_id": "VULN-2024-001",
+      "vulnerable_package": {
+        "name": "xml-parser",
+        "version": "2.4.1"
+      },
+      "expected_direct_packages": [
+        "auth-middleware@1.3.0",
+        "http-client@5.0.0"
+      ],
+      "expected_affected_applications": [
+        "Payment Gateway",
+        "User Portal"
+      ],
+      "expected_cypher_pattern": "MATCH (v:Vulnerability {id: 'VULN-2024-001'})-[:AFFECTS]->(vp:Package)<-[:DEPENDS_ON]-(direct:Package)<-[:USES]-(app:Application) RETURN DISTINCT app.name, direct.name",
+      "verification_criteria": "The agent must identify that Payment Gateway and User Portal directly depend on packages importing the vulnerable library with 1 hop."
+    },
+    {
+      "id": "TC-TRANSITIVE-02",
+      "name": "Multi-Hop Transitive Dependency Chain",
+      "vuln_id": "VULN-2024-001",
+      "target_application": "Report Generator",
+      "expected_hops": 3,
+      "expected_path": [
+        "xml-parser@2.4.1",
+        "http-client@5.0.0",
+        "data-processor@2.1.0",
+        "report-engine@4.0.0",
+        "Report Generator"
+      ],
+      "expected_cypher_pattern": "MATCH path = (v:Vulnerability {id: 'VULN-2024-001'})-[:AFFECTS]->(vp:Package)<-[:DEPENDS_ON*1..4]-(p:Package)<-[:USES]-(a:Application {name: 'Report Generator'}) RETURN [n IN nodes(path) | coalesce(n.name, n.id)] AS chain",
+      "verification_criteria": "The agent must traverse against the DEPENDS_ON relationship up to 3 hops and discover that Report Generator inherits the vulnerability transitively through report-engine -> data-processor -> http-client -> xml-parser."
+    },
+    {
+      "id": "TC-ASSET-03",
+      "name": "Multiple Affected Assets & Critical Internet Exposure",
+      "vuln_id": "VULN-2024-001",
+      "expected_affected_asset_count": 3,
+      "expected_assets": [
+        {
+          "id": "asset-prod-k8s",
+          "name": "Production Kubernetes Cluster",
+          "criticality": "CRITICAL",
+          "exposed": true
+        },
+        {
+          "id": "asset-payments-db",
+          "name": "Payments Database",
+          "criticality": "CRITICAL",
+          "exposed": false
+        },
+        {
+          "id": "asset-batch-server",
+          "name": "Batch Report Server",
+          "criticality": "MEDIUM",
+          "exposed": false
+        }
+      ],
+      "scoring_factors": {
+        "severity_weight": 40.0,
+        "asset_criticality_weight": 30.0,
+        "exposure_bonus": 10.0,
+        "reach_weight_min": 8.0,
+        "reach_weight_max": 10.0,
+        "expected_score_range": [88.0, 91.0],
+        "expected_priority_label": "CRITICAL"
+      },
+      "verification_criteria": "Payment Gateway must connect to both asset-prod-k8s and asset-payments-db. Because asset-prod-k8s is internet-exposed, the agent must add the +10.0 exposure bonus and assign a CRITICAL priority."
+    },
+    {
+      "id": "TC-UNCERTAINTY-04",
+      "name": "Insufficient Evidence & Missing Ownership Handling",
+      "vuln_id": "VULN-2024-004",
+      "vulnerable_package": {
+        "name": "file-utils",
+        "version": "3.1.2"
+      },
+      "expected_affected_application": "Report Generator",
+      "missing_evidence_indicators": [
+        "Vulnerability evidence marked incomplete (incomplete_evidence = true)",
+        "Application 'Report Generator' has no assigned responsible team (team_id is null)"
+      ],
+      "scoring_factors": {
+        "severity_weight": 30.0,
+        "asset_criticality_weight": 14.0,
+        "exposure_bonus": 0.0,
+        "confidence_penalty": -15.0,
+        "expected_priority_label": "UNCERTAIN"
+      },
+      "verification_criteria": "The triage agent must not assign false certainty. It must explicitly report missing team ownership and incomplete vulnerability evidence, apply the confidence penalty, and flag the finding for human analyst evidence gathering."
+    }
+  ]
+}

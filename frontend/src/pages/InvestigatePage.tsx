@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../services/api';
 import type { VulnerabilityBrief, InvestigationResult, GraphNode } from '../services/api';
-import { SeverityBadge, PriorityBadge, CriticalityBadge } from '../components/Badges';
+import { SeverityBadge, PriorityBadge, CriticalityBadge, SyntheticBadge } from '../components/Badges';
 import { PriorityScoreCard } from '../components/PriorityScoreCard';
 import { EvidencePathView } from '../components/EvidencePathView';
 import { DependencyGraph } from '../components/DependencyGraph';
@@ -187,7 +187,7 @@ export function InvestigatePage() {
               >
                 <Shield size={16} style={{ color: 'var(--sev-critical)', marginTop: 2, flexShrink: 0 }} />
                 <div className="flex flex-col gap-1" style={{ flex: 1 }}>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <SeverityBadge severity={selectedVuln.severity} />
                     {selectedVuln.cvss_score && (
                       <span className="badge badge-uncertain">CVSS {selectedVuln.cvss_score}</span>
@@ -195,6 +195,7 @@ export function InvestigatePage() {
                     {selectedVuln.cve && (
                       <span className="text-xs text-tertiary font-mono">{selectedVuln.cve}</span>
                     )}
+                    <SyntheticBadge label="SYNTHETIC BENCHMARK" />
                   </div>
                   <div className="font-semibold">{selectedVuln.title}</div>
                   {selectedVuln.description && (
@@ -265,6 +266,15 @@ export function InvestigatePage() {
         {/* Results */}
         {result && !investigating && (
           <>
+            {/* Synthetic Benchmark Disclaimer Banner */}
+            <div className="alert alert-info" style={{ marginBottom: 'var(--space-4)' }}>
+              <Info size={16} style={{ flexShrink: 0, color: 'var(--accent-primary)' }} />
+              <div className="text-xs text-secondary">
+                <strong style={{ color: 'var(--text-primary)' }}>Synthetic Benchmark Triage: </strong>
+                All dependency paths, packages, and assets shown are synthetic test fixtures designed to evaluate FalkorDB multi-hop reachability and deterministic scoring. Not a real-world vulnerability.
+              </div>
+            </div>
+
             {/* Missing evidence warning */}
             {!result.evidence_complete && (
               <div className="alert alert-warning" style={{ marginBottom: 'var(--space-5)' }}>

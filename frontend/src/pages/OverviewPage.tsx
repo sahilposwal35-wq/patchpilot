@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../services/api';
 import type { OverviewStats, VulnerabilityBrief, InvestigationBrief, RemediationBrief } from '../services/api';
-import { SeverityBadge } from '../components/Badges';
+import { SeverityBadge, SyntheticBadge } from '../components/Badges';
 import {
   Shield,
   AlertTriangle,
@@ -172,6 +172,7 @@ export function OverviewPage() {
                         {v.cvss_score && (
                           <span className="text-xs text-tertiary">CVSS {v.cvss_score}</span>
                         )}
+                        <SyntheticBadge label="SYNTHETIC" />
                       </div>
                       <div className="font-medium text-sm truncate">{v.title}</div>
                       <div className="text-xs text-tertiary" style={{ marginTop: 2 }}>

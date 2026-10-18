@@ -1,93 +1,169 @@
 {
+  "_metadata": {
+    "dataset_name": "PatchPilot Synthetic Benchmark Graph Dataset",
+    "version": "1.0.0",
+    "license": "MIT",
+    "is_synthetic": true,
+    "disclaimer": "ALL ENTITIES IN THIS DATASET ARE SYNTHETIC AND CREATED SOLELY FOR DEMONSTRATION AND TESTING OF GRAPH-POWERED SECURITY TRIAGE AGENTS. THEY DO NOT REPRESENT REAL-WORLD SOFTWARE VULNERABILITIES, LIVE CVEs, OR PRODUCTION ASSETS.",
+    "purpose": "Evaluation of autonomous graph agents on direct dependencies, multi-hop transitive reachability, asset exposure, and uncertainty handling.",
+    "ground_truth_test_cases": {
+      "direct_dependency": {
+        "vulnerability_id": "VULN-2024-001",
+        "vulnerable_package": "xml-parser@2.4.1",
+        "direct_dependent_packages": ["auth-middleware@1.3.0", "http-client@5.0.0"],
+        "direct_applications": ["Payment Gateway", "User Portal"],
+        "expected_reachability": "Direct (1-hop package dependency)"
+      },
+      "transitive_dependency": {
+        "vulnerability_id": "VULN-2024-001",
+        "vulnerable_package": "xml-parser@2.4.1",
+        "transitive_chain": "xml-parser@2.4.1 <- http-client@5.0.0 <- data-processor@2.1.0 <- report-engine@4.0.0",
+        "transitive_application": "Report Generator",
+        "expected_hops": 3,
+        "expected_reachability": "Deep transitive reachability across 3 package hops"
+      },
+      "multiple_affected_assets": {
+        "vulnerability_id": "VULN-2024-001",
+        "affected_applications": ["Payment Gateway", "User Portal", "Report Generator"],
+        "affected_assets": [
+          {
+            "id": "asset-prod-k8s",
+            "name": "Production Kubernetes Cluster",
+            "criticality": "CRITICAL",
+            "exposed": true
+          },
+          {
+            "id": "asset-payments-db",
+            "name": "Payments Database",
+            "criticality": "CRITICAL",
+            "exposed": false
+          },
+          {
+            "id": "asset-batch-server",
+            "name": "Batch Report Server",
+            "criticality": "MEDIUM",
+            "exposed": false
+          }
+        ],
+        "expected_priority": "CRITICAL (Score: ~89.2/100 due to CRITICAL severity + CRITICAL asset + Internet exposure bonus)"
+      },
+      "insufficient_evidence": {
+        "vulnerability_id": "VULN-2024-004",
+        "vulnerable_package": "file-utils@3.1.2",
+        "incomplete_evidence_flag": true,
+        "unassigned_team_application": "Report Generator (team_id=null)",
+        "expected_confidence_penalty": -15.0,
+        "expected_triage_handling": "Prioritization engine flags missing team ownership and applies confidence penalty, resulting in UNCERTAIN or lower priority"
+      }
+    }
+  },
   "vulnerabilities": [
     {
       "id": "VULN-2024-001",
       "title": "Remote Code Execution in xml-parser",
-      "description": "A heap buffer overflow in xml-parser \u22642.4.1 allows an attacker to execute arbitrary code via a crafted XML document.",
+      "description": "[SYNTHETIC BENCHMARK] Heap buffer overflow in synthetic package xml-parser <=2.4.1 allows arbitrary code execution via crafted XML payloads. (Synthetic demonstration data for hackathon agent evaluation; not a real-world CVE).",
       "severity": "CRITICAL",
       "cvss_score": 9.8,
       "cve": "CVE-2024-12345",
-      "published": "2024-03-15"
+      "published": "2024-03-15",
+      "is_synthetic": true,
+      "synthetic_label": "TEST CASE 1: Critical Transitive & Public Asset"
     },
     {
       "id": "VULN-2024-002",
       "title": "SQL Injection in query-builder",
-      "description": "Improper input sanitization in query-builder \u22641.2.0 allows SQL injection via user-supplied filter parameters.",
+      "description": "[SYNTHETIC BENCHMARK] Improper parameter binding in synthetic library query-builder <=1.2.0 allows SQL injection via user-supplied filter clauses. (Synthetic demonstration data; not a real-world CVE).",
       "severity": "HIGH",
       "cvss_score": 8.1,
       "cve": "CVE-2024-67890",
-      "published": "2024-04-02"
+      "published": "2024-04-02",
+      "is_synthetic": true,
+      "synthetic_label": "TEST CASE 2: High Severity Internal Microservice"
     },
     {
       "id": "VULN-2024-003",
       "title": "Denial of Service in log-rotator",
-      "description": "An uncontrolled resource consumption bug in log-rotator \u22640.9.5 allows an attacker to exhaust disk space.",
+      "description": "[SYNTHETIC BENCHMARK] Uncontrolled resource consumption bug in synthetic package log-rotator <=0.9.5 allows log-file exhaustion of storage volumes. (Synthetic demonstration data; not a real-world CVE).",
       "severity": "MEDIUM",
       "cvss_score": 5.3,
       "cve": "CVE-2024-11111",
-      "published": "2024-05-10"
+      "published": "2024-05-10",
+      "is_synthetic": true,
+      "synthetic_label": "TEST CASE 3: Staging Isolated Medium Severity"
     },
     {
       "id": "VULN-2024-004",
       "title": "Path Traversal in file-utils",
-      "description": "Insufficient path validation in file-utils \u22643.1.2 allows directory traversal attacks.",
+      "description": "[SYNTHETIC BENCHMARK] Directory traversal bug in synthetic library file-utils <=3.1.2. Explicitly flagged with incomplete evidence and missing team ownership to test confidence penalties and uncertain triage states. (Synthetic demonstration data; not a real-world CVE).",
       "severity": "HIGH",
       "cvss_score": 7.5,
       "cve": "CVE-2024-22222",
       "published": "2024-06-01",
-      "incomplete_evidence": true
+      "incomplete_evidence": true,
+      "is_synthetic": true,
+      "synthetic_label": "TEST CASE 4: Incomplete Evidence & Missing Ownership"
     }
   ],
   "packages": [
     {
       "name": "xml-parser",
       "version": "2.4.1",
-      "ecosystem": "npm"
+      "ecosystem": "npm",
+      "is_synthetic": true
     },
     {
       "name": "query-builder",
       "version": "1.2.0",
-      "ecosystem": "pip"
+      "ecosystem": "pip",
+      "is_synthetic": true
     },
     {
       "name": "log-rotator",
       "version": "0.9.5",
-      "ecosystem": "npm"
+      "ecosystem": "npm",
+      "is_synthetic": true
     },
     {
       "name": "file-utils",
       "version": "3.1.2",
-      "ecosystem": "npm"
+      "ecosystem": "npm",
+      "is_synthetic": true
     },
     {
       "name": "http-client",
       "version": "5.0.0",
-      "ecosystem": "npm"
+      "ecosystem": "npm",
+      "is_synthetic": true
     },
     {
       "name": "data-processor",
       "version": "2.1.0",
-      "ecosystem": "npm"
+      "ecosystem": "npm",
+      "is_synthetic": true
     },
     {
       "name": "auth-middleware",
       "version": "1.3.0",
-      "ecosystem": "npm"
+      "ecosystem": "npm",
+      "is_synthetic": true
     },
     {
       "name": "report-engine",
       "version": "4.0.0",
-      "ecosystem": "npm"
+      "ecosystem": "npm",
+      "is_synthetic": true
     },
     {
       "name": "orm-core",
       "version": "3.2.0",
-      "ecosystem": "pip"
+      "ecosystem": "pip",
+      "is_synthetic": true
     },
     {
       "name": "cache-layer",
       "version": "1.1.0",
-      "ecosystem": "npm"
+      "ecosystem": "npm",
+      "is_synthetic": true
     }
   ],
   "dependency_edges": [
@@ -156,22 +232,26 @@
     {
       "id": "team-platform",
       "name": "Platform Engineering",
-      "email": "platform@example.com"
+      "email": "platform@example.com",
+      "is_synthetic": true
     },
     {
       "id": "team-payments",
       "name": "Payments Team",
-      "email": "payments@example.com"
+      "email": "payments@example.com",
+      "is_synthetic": true
     },
     {
       "id": "team-analytics",
       "name": "Analytics Team",
-      "email": "analytics@example.com"
+      "email": "analytics@example.com",
+      "is_synthetic": true
     },
     {
       "id": "team-infra",
       "name": "Infrastructure Team",
-      "email": "infra@example.com"
+      "email": "infra@example.com",
+      "is_synthetic": true
     }
   ],
   "applications": [
@@ -180,35 +260,41 @@
       "name": "Payment Gateway",
       "environment": "production",
       "language": "JavaScript",
-      "team_id": "team-payments"
+      "team_id": "team-payments",
+      "is_synthetic": true
     },
     {
       "id": "app-user-portal",
       "name": "User Portal",
       "environment": "production",
       "language": "JavaScript",
-      "team_id": "team-platform"
+      "team_id": "team-platform",
+      "is_synthetic": true
     },
     {
       "id": "app-analytics-service",
       "name": "Analytics Service",
       "environment": "production",
       "language": "Python",
-      "team_id": "team-analytics"
+      "team_id": "team-analytics",
+      "is_synthetic": true
     },
     {
       "id": "app-internal-tools",
       "name": "Internal Tools",
       "environment": "staging",
       "language": "JavaScript",
-      "team_id": "team-infra"
+      "team_id": "team-infra",
+      "is_synthetic": true
     },
     {
       "id": "app-report-generator",
       "name": "Report Generator",
       "environment": "production",
       "language": "JavaScript",
-      "team_id": null
+      "team_id": null,
+      "is_synthetic": true,
+      "ownership_note": "Intentionally unassigned to test missing-ownership triage detection"
     }
   ],
   "app_package_edges": [
@@ -250,7 +336,8 @@
       "criticality": "CRITICAL",
       "environment": "production",
       "region": "us-east-1",
-      "exposed": true
+      "exposed": true,
+      "is_synthetic": true
     },
     {
       "id": "asset-payments-db",
@@ -258,7 +345,8 @@
       "criticality": "CRITICAL",
       "environment": "production",
       "region": "us-east-1",
-      "exposed": false
+      "exposed": false,
+      "is_synthetic": true
     },
     {
       "id": "asset-analytics-cluster",
@@ -266,7 +354,8 @@
       "criticality": "HIGH",
       "environment": "production",
       "region": "us-west-2",
-      "exposed": false
+      "exposed": false,
+      "is_synthetic": true
     },
     {
       "id": "asset-staging-env",
@@ -274,7 +363,8 @@
       "criticality": "LOW",
       "environment": "staging",
       "region": "us-east-1",
-      "exposed": false
+      "exposed": false,
+      "is_synthetic": true
     },
     {
       "id": "asset-batch-server",
@@ -282,7 +372,8 @@
       "criticality": "MEDIUM",
       "environment": "production",
       "region": "eu-west-1",
-      "exposed": false
+      "exposed": false,
+      "is_synthetic": true
     }
   ],
   "app_asset_edges": [
@@ -318,7 +409,8 @@
       "status": "open",
       "source": "SAST",
       "detected_at": "2024-03-16",
-      "severity_override": null
+      "severity_override": null,
+      "is_synthetic": true
     },
     {
       "id": "finding-002",
@@ -326,7 +418,8 @@
       "status": "open",
       "source": "Dependency Scanner",
       "detected_at": "2024-04-03",
-      "severity_override": null
+      "severity_override": null,
+      "is_synthetic": true
     },
     {
       "id": "finding-003",
@@ -334,7 +427,8 @@
       "status": "open",
       "source": "DAST",
       "detected_at": "2024-05-11",
-      "severity_override": null
+      "severity_override": null,
+      "is_synthetic": true
     },
     {
       "id": "finding-004",
@@ -343,7 +437,8 @@
       "source": "Manual Review",
       "detected_at": "2024-06-05",
       "severity_override": null,
-      "incomplete_evidence": true
+      "incomplete_evidence": true,
+      "is_synthetic": true
     }
   ]
 }

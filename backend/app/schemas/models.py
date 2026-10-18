@@ -40,6 +40,8 @@ class VulnerabilityBrief(BaseModel):
     published: Optional[str]
     description: Optional[str]
     finding_count: int = 0
+    is_synthetic: bool = True
+    synthetic_label: Optional[str] = None
 
 
 class VulnerabilityDetail(VulnerabilityBrief):

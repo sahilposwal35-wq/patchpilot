@@ -1,13 +1,21 @@
+# PatchPilot Backend Requirements
+# Compatible with Python 3.11+ (tested on 3.14.4)
+# Pin ranges rather than exact versions to allow wheels for Python 3.14+.
+
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
-pydantic==2.10.2
-pydantic-settings==2.6.1
+
+# pydantic 2.14+ ships pre-built cp314 wheels (no Rust build required)
+pydantic>=2.14
+pydantic-settings>=2.16
+
 falkordb==1.0.10
-python-dotenv==1.0.1
+python-dotenv>=1.2
+
 httpx==0.27.2
 openai==1.57.0
 anthropic==0.40.0
+
 pytest==8.3.4
 pytest-asyncio==0.24.0
-httpx==0.27.2
 python-multipart==0.0.18

@@ -40,6 +40,8 @@ export interface VulnerabilityBrief {
   published: string | null;
   description: string | null;
   finding_count: number;
+  is_synthetic?: boolean;
+  synthetic_label?: string | null;
 }
 
 export interface VulnerabilityDetail extends VulnerabilityBrief {

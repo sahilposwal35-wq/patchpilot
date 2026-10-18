@@ -8,9 +8,12 @@ Edge direction convention:
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from app.db.connection import get_graph
@@ -291,7 +294,42 @@ VULN_PACKAGE_MAP = {
 }
 
 
-def seed_graph(clear_first: bool = False) -> dict[str, int]:
+def load_seed_dataset(file_path: str | Path | None = None) -> dict[str, Any]:
+    """
+    Load synthetic benchmark dataset from a JSON file.
+    Falls back gracefully to the embedded SYNTHETIC_DATA dictionary.
+    """
+    candidates: list[Path] = []
+    if file_path:
+        candidates.append(Path(file_path))
+
+    env_path = os.environ.get("PATCHPILOT_SEED_FILE")
+    if env_path:
+        candidates.append(Path(env_path))
+
+    # Standard locations relative to project repository
+    repo_root = Path(__file__).resolve().parents[3]
+    candidates.append(repo_root / "data" / "synthetic_data" / "graph_dataset.json")
+    candidates.append(Path(__file__).resolve().parents[2] / "data" / "synthetic_data" / "graph_dataset.json")
+    candidates.append(Path("/app/data/synthetic_data/graph_dataset.json"))
+    candidates.append(Path.cwd() / "data" / "synthetic_data" / "graph_dataset.json")
+    candidates.append(Path.cwd().parent / "data" / "synthetic_data" / "graph_dataset.json")
+
+    for p in candidates:
+        if p.is_file():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    logger.info("Loaded seed dataset from file: %s", p)
+                    return data
+            except Exception as exc:
+                logger.warning("Could not parse seed file %s: %s", p, exc)
+
+    logger.info("Using embedded SYNTHETIC_DATA dataset")
+    return SYNTHETIC_DATA
+
+
+def seed_graph(clear_first: bool = False, dataset_path: str | Path | None = None) -> dict[str, int]:
     """
     Load synthetic data into FalkorDB. Idempotent via MERGE.
     Returns counts of nodes created.
@@ -302,10 +340,22 @@ def seed_graph(clear_first: bool = False) -> dict[str, int]:
         g.query("MATCH (n) DETACH DELETE n")
         logger.info("Graph cleared before seed.")
 
+    dataset = load_seed_dataset(dataset_path)
+    vulns = dataset.get("vulnerabilities", SYNTHETIC_DATA["vulnerabilities"])
+    packages = dataset.get("packages", SYNTHETIC_DATA["packages"])
+    dep_edges = dataset.get("dependency_edges", SYNTHETIC_DATA["dependency_edges"])
+    vuln_pkg_map = dataset.get("vuln_package_map", VULN_PACKAGE_MAP)
+    teams = dataset.get("teams", SYNTHETIC_DATA["teams"])
+    apps = dataset.get("applications", SYNTHETIC_DATA["applications"])
+    app_pkg_edges = dataset.get("app_package_edges", SYNTHETIC_DATA["app_package_edges"])
+    assets = dataset.get("assets", SYNTHETIC_DATA["assets"])
+    app_asset_edges = dataset.get("app_asset_edges", SYNTHETIC_DATA["app_asset_edges"])
+    findings = dataset.get("findings", SYNTHETIC_DATA["findings"])
+
     counts: dict[str, int] = {}
 
     # Vulnerabilities
-    for v in SYNTHETIC_DATA["vulnerabilities"]:
+    for v in vulns:
         g.query(
             """
             MERGE (v:Vulnerability {id: $id})
@@ -315,7 +365,9 @@ def seed_graph(clear_first: bool = False) -> dict[str, int]:
                 v.cvss_score = $cvss_score,
                 v.cve = $cve,
                 v.published = $published,
-                v.incomplete_evidence = $inc
+                v.incomplete_evidence = $inc,
+                v.is_synthetic = true,
+                v.synthetic_label = $syn_label
             """,
             {
                 "id": v["id"],
@@ -326,23 +378,25 @@ def seed_graph(clear_first: bool = False) -> dict[str, int]:
                 "cve": v["cve"],
                 "published": v["published"],
                 "inc": v.get("incomplete_evidence", False),
+                "syn_label": v.get("synthetic_label", "SYNTHETIC TEST BENCHMARK"),
             },
         )
-    counts["vulnerabilities"] = len(SYNTHETIC_DATA["vulnerabilities"])
+    counts["vulnerabilities"] = len(vulns)
 
     # Packages
-    for p in SYNTHETIC_DATA["packages"]:
+    for p in packages:
         g.query(
             """
             MERGE (p:Package {name: $name, version: $version})
-            SET p.ecosystem = $ecosystem
+            SET p.ecosystem = $ecosystem,
+                p.is_synthetic = true
             """,
             {"name": p["name"], "version": p["version"], "ecosystem": p["ecosystem"]},
         )
-    counts["packages"] = len(SYNTHETIC_DATA["packages"])
+    counts["packages"] = len(packages)
 
     # DEPENDS_ON edges: A-[:DEPENDS_ON]->B means A depends on B
-    for (a_name, a_ver, b_name, b_ver) in SYNTHETIC_DATA["dependency_edges"]:
+    for (a_name, a_ver, b_name, b_ver) in dep_edges:
         g.query(
             """
             MATCH (a:Package {name: $a_name, version: $a_ver})
@@ -353,7 +407,8 @@ def seed_graph(clear_first: bool = False) -> dict[str, int]:
         )
 
     # Vulnerability AFFECTS Package
-    for vuln_id, (pkg_name, pkg_ver) in VULN_PACKAGE_MAP.items():
+    for vuln_id, pkg_info in vuln_pkg_map.items():
+        pkg_name, pkg_ver = pkg_info[0], pkg_info[1]
         g.query(
             """
             MATCH (v:Vulnerability {id: $vid})
@@ -364,22 +419,24 @@ def seed_graph(clear_first: bool = False) -> dict[str, int]:
         )
 
     # Teams
-    for t in SYNTHETIC_DATA["teams"]:
+    for t in teams:
         g.query(
             """
             MERGE (t:Team {id: $id})
-            SET t.name = $name, t.email = $email
+            SET t.name = $name, t.email = $email,
+                t.is_synthetic = true
             """,
             {"id": t["id"], "name": t["name"], "email": t["email"]},
         )
-    counts["teams"] = len(SYNTHETIC_DATA["teams"])
+    counts["teams"] = len(teams)
 
     # Applications
-    for a in SYNTHETIC_DATA["applications"]:
+    for a in apps:
         g.query(
             """
             MERGE (a:Application {id: $id})
-            SET a.name = $name, a.environment = $env, a.language = $lang
+            SET a.name = $name, a.environment = $env, a.language = $lang,
+                a.is_synthetic = true
             """,
             {
                 "id": a["id"],
@@ -388,10 +445,10 @@ def seed_graph(clear_first: bool = False) -> dict[str, int]:
                 "lang": a["language"],
             },
         )
-    counts["applications"] = len(SYNTHETIC_DATA["applications"])
+    counts["applications"] = len(apps)
 
     # App OWNED_BY Team
-    for a in SYNTHETIC_DATA["applications"]:
+    for a in apps:
         if a.get("team_id"):
             g.query(
                 """
@@ -403,7 +460,7 @@ def seed_graph(clear_first: bool = False) -> dict[str, int]:
             )
 
     # App USES Package
-    for (app_id, pkg_name, pkg_ver) in SYNTHETIC_DATA["app_package_edges"]:
+    for (app_id, pkg_name, pkg_ver) in app_pkg_edges:
         g.query(
             """
             MATCH (a:Application {id: $aid})
@@ -414,13 +471,14 @@ def seed_graph(clear_first: bool = False) -> dict[str, int]:
         )
 
     # Assets
-    for s in SYNTHETIC_DATA["assets"]:
+    for s in assets:
         g.query(
             """
             MERGE (s:Asset {id: $id})
             SET s.name = $name, s.criticality = $crit,
                 s.environment = $env, s.region = $region,
-                s.exposed = $exposed
+                s.exposed = $exposed,
+                s.is_synthetic = true
             """,
             {
                 "id": s["id"],
@@ -431,10 +489,10 @@ def seed_graph(clear_first: bool = False) -> dict[str, int]:
                 "exposed": s["exposed"],
             },
         )
-    counts["assets"] = len(SYNTHETIC_DATA["assets"])
+    counts["assets"] = len(assets)
 
     # App DEPLOYED_AS Asset
-    for (app_id, asset_id) in SYNTHETIC_DATA["app_asset_edges"]:
+    for (app_id, asset_id) in app_asset_edges:
         g.query(
             """
             MATCH (a:Application {id: $aid})
@@ -445,12 +503,13 @@ def seed_graph(clear_first: bool = False) -> dict[str, int]:
         )
 
     # Findings
-    for f in SYNTHETIC_DATA["findings"]:
+    for f in findings:
         g.query(
             """
             MERGE (f:Finding {id: $id})
             SET f.status = $status, f.source = $source,
-                f.detected_at = $det, f.incomplete_evidence = $inc
+                f.detected_at = $det, f.incomplete_evidence = $inc,
+                f.is_synthetic = true
             """,
             {
                 "id": f["id"],
@@ -469,7 +528,7 @@ def seed_graph(clear_first: bool = False) -> dict[str, int]:
             """,
             {"fid": f["id"], "vid": f["vuln_id"]},
         )
-    counts["findings"] = len(SYNTHETIC_DATA["findings"])
+    counts["findings"] = len(findings)
 
     logger.info("Seed complete: %s", counts)
     ensure_indexes()
@@ -487,7 +546,9 @@ def get_all_vulnerabilities() -> list[dict]:
         MATCH (v:Vulnerability)
         OPTIONAL MATCH (f:Finding)-[:IDENTIFIES]->(v)
         RETURN v.id, v.title, v.severity, v.cvss_score, v.cve,
-               v.published, v.description, count(f) AS finding_count
+               v.published, v.description, count(f) AS finding_count,
+               coalesce(v.is_synthetic, true) AS is_synthetic,
+               v.synthetic_label
         ORDER BY v.cvss_score DESC
         """
     )
@@ -502,6 +563,8 @@ def get_all_vulnerabilities() -> list[dict]:
             "published": row[5],
             "description": row[6],
             "finding_count": row[7],
+            "is_synthetic": bool(row[8]) if len(row) > 8 else True,
+            "synthetic_label": row[9] if len(row) > 9 else None,
         })
     return rows
 
@@ -516,7 +579,9 @@ def get_vulnerability_by_id(vuln_id: str) -> dict | None:
         RETURN v.id, v.title, v.severity, v.cvss_score, v.cve,
                v.published, v.description, v.incomplete_evidence,
                collect(DISTINCT p.name + '@' + p.version) AS packages,
-               collect(DISTINCT f.id) AS findings
+               collect(DISTINCT f.id) AS findings,
+               coalesce(v.is_synthetic, true) AS is_synthetic,
+               v.synthetic_label
         """,
         {"id": vuln_id},
     )
@@ -534,6 +599,8 @@ def get_vulnerability_by_id(vuln_id: str) -> dict | None:
         "incomplete_evidence": row[7],
         "affected_packages": row[8],
         "finding_ids": row[9],
+        "is_synthetic": bool(row[10]) if len(row) > 10 else True,
+        "synthetic_label": row[11] if len(row) > 11 else None,
     }
 
 

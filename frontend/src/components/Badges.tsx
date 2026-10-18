@@ -52,3 +52,23 @@ export function CriticalityBadge({ criticality }: CriticalityBadgeProps) {
   const cls = SEVERITY_CLASS[criticality?.toUpperCase()] || 'badge-uncertain';
   return <span className={`badge ${cls}`}>{criticality}</span>;
 }
+
+export function SyntheticBadge({ label = 'SYNTHETIC BENCHMARK' }: { label?: string }) {
+  return (
+    <span
+      className="badge"
+      style={{
+        background: '#F3E8FF',
+        color: '#6B21A8',
+        borderColor: '#D8B4FE',
+        fontWeight: 600,
+        fontSize: '10px',
+        letterSpacing: '0.4px',
+      }}
+      title="Synthetic benchmark dataset entity — Not a verified real-world vulnerability"
+    >
+      {label}
+    </span>
+  );
+}
+
